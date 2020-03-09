@@ -13,3 +13,6 @@ logdir/*
 
 # Cache dir
 cache/*
+
+# Saved Model dir
+saved_model/

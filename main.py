@@ -49,7 +49,7 @@ def build_parser():
       dest="training.export_saved_model_dir", help="Path to export Saved Model to")
   return parser
 
-def train(model, dataset, learning_rate,
+def train(model, dataset, learning_rate, checkpoint_step,
           train_summary_writer, test_summary_writer,
           batch_size, num_steps,
           test_dataset, test_step, test_num_steps):
@@ -59,6 +59,12 @@ def train(model, dataset, learning_rate,
   optimizer = tfa.optimizers.RectifiedAdam(lr=learning_rate)
   train_cumulative_loss = tf.metrics.Mean()
   test_cumulative_loss = tf.metrics.Mean()
+  checkpoint = tf.train.Checkpoint(
+      optimizer=optimizer,
+      model=model,
+      summary_step=tf.summary.experimental.get_step())
+  if utils.checkpoint_exists():
+    utils.load_latest_checkpoint(checkpoint)
   def _train_step_fn(model, X, Y):
     with tf.GradientTape() as tape:
       output = model(X)
@@ -101,7 +107,8 @@ def train(model, dataset, learning_rate,
         while (step % test_step) < test_num_steps:
           test_X, test_Y = next(test_dataset)
           step = distributed_step(model, test_X, test_Y, False)
-
+      if not step % checkpoint_step:
+        utils.save_checkpoint(checkpoint)
       tf.summary.scalar("Cumulative Reconstruction Loss",
                         train_cumulative_loss.result(),
                         tf.summary.experimental.get_step())
@@ -124,14 +131,18 @@ def main(argv):
     model = models.load_model(argv.models.type)
     if not tf.io.gfile.exists(argv.training.logdir):
       tf.io.gfile.makedirs(argv.training.logdir)
+    if not tf.io.gfile.exists(argv.training.checkpoint_folder):
+      tf.io.gfile.makedirs(argv.training.checkpoint_folder)
+
     train_summary_writer = tf.summary.create_file_writer(
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "train"))
     test_summary_writer = tf.summary.create_file_writer(
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "test"))
     train(model, train_data, argv.training.learning_rate,
-          train_summary_writer, test_summary_writer,
-          argv.training.batch_size, argv.training.num_steps,
-          test_data, argv.testing.step, argv.testing.step_size)
+          argv.training.checkpoint_step, train_summary_writer,
+          test_summary_writer, argv.training.batch_size,
+          argv.training.num_steps, test_data, argv.testing.step,
+          argv.testing.step_size)
     if argv.training.export_saved_model_dir:
       print("Saving Model to %s" % argv.training.export_saved_model_dir)
       tf.saved_model.save(model, argv.training.export_saved_model_dir)
