@@ -1,0 +1,4 @@
+dataset:
+  records_path: /home/rick/HEP/cache
+  repeat: -1
+  shuffle: True

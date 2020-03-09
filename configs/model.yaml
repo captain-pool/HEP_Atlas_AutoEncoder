@@ -1,0 +1,27 @@
+models:
+  type: "vanilla"
+  vanilla:
+    architecture:
+      encoder:
+        num_units:
+          - 100
+          - 50
+          - 3
+      decoder:
+        num_units:
+          - 50
+          - 100
+          - 4
+  residual:
+    architecture:
+      encoder:
+        num_units:
+          - 100
+          - 50
+          - 3
+      decoder:
+        num_units:
+          - 50
+          - 100
+          - 4
+    weight: !!float 0.01

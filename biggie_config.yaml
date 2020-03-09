@@ -1,0 +1,35 @@
+config: [configs/dataset.yaml, configs/model.yaml, configs/training.yaml]
+device: cpu
+testing:
+    dataset:
+        pickle_path: dataset/all_jets_test_4D_100_percent.pkl
+    step: 100
+    step_size: 10
+training:
+    dataset:
+        pickle_path: dataset/all_jets_train_4D_100_percent.pkl
+    learning_rate: 0.001
+    logdir: logdir
+    batch_size: 64
+    num_steps: 10000
+    loss: root_mean_squared_error
+export_config: /home/rick/HEP/biggie_config.yaml
+models:
+    type: vanilla
+    vanilla:
+        architecture:
+            encoder:
+                num_units: [100, 50, 3]
+            decoder:
+                num_units: [50, 100, 4]
+    residual:
+        architecture:
+            encoder:
+                num_units: [100, 50, 3]
+            decoder:
+                num_units: [50, 100, 4]
+        weight: 0.01
+dataset:
+    records_path: /home/rick/HEP/cache
+    repeat: -1
+    shuffle: yes

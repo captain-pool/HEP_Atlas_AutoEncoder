@@ -1,0 +1,15 @@
+# VIM Files
+.*.swp
+.*.swo
+
+# Python Folders
+__pycache__/
+
+#Dataset Pickles
+*.pkl
+
+# Log Files
+logdir/*
+
+# Cache dir
+cache/*
