@@ -19,7 +19,7 @@ _LOSSES = {
 }
 
 def save_checkpoint(checkpoint):
-  checkpoint.save(configuration.training.checkpoint_folder)
+  checkpoint.save(file_prefix=configuration.training.checkpoint_folder)
 
 def checkpoint_exists():
   checkpoint_prefix = configuration.training.checkpoint_folder

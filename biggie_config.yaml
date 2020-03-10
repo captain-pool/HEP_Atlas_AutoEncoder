@@ -1,5 +1,6 @@
 config: [configs/dataset.yaml, configs/model.yaml, configs/training.yaml]
 device: cpu
+export_config: yes
 testing:
     dataset:
         pickle_path: dataset/all_jets_test_4D_100_percent.pkl
@@ -8,12 +9,15 @@ testing:
 training:
     dataset:
         pickle_path: dataset/all_jets_train_4D_100_percent.pkl
+    export_saved_model_dir: saved_model
     learning_rate: 0.001
     logdir: logdir
-    batch_size: 64
-    num_steps: 10000
+    num_steps: 100000
+    batch_size: 8
     loss: root_mean_squared_error
-export_config: /home/rick/HEP/biggie_config.yaml
+    checkpoint_step: 999
+    checkpoint_folder: /home/rick/HEP/checkpoints/ckpt
+export_config_path: /home/rick/HEP/biggie_config.yaml
 models:
     type: vanilla
     vanilla:

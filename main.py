@@ -97,6 +97,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
     mean_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN,
                                   distributed_metric, axis=None)
     return mean_metric
+
   with train_summary_writer.as_default():
     while step < num_steps:
       X, Y = next(dataset)
@@ -108,6 +109,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
           test_X, test_Y = next(test_dataset)
           step = distributed_step(model, test_X, test_Y, False)
       if not step % checkpoint_step:
+        tf.print("Checkpoining ...")
         utils.save_checkpoint(checkpoint)
       tf.summary.scalar("Cumulative Reconstruction Loss",
                         train_cumulative_loss.result(),
@@ -122,6 +124,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
                             tf.summary.experimental.get_step())
 
 def main(argv):
+  tf.random.set_seed(0)
   strategy, device = utils.get_strategy(argv.device)
   timestamp = datetime.datetime.now().isoformat()
   with tf.device(device), strategy.scope():
@@ -131,8 +134,10 @@ def main(argv):
     model = models.load_model(argv.models.type)
     if not tf.io.gfile.exists(argv.training.logdir):
       tf.io.gfile.makedirs(argv.training.logdir)
-    if not tf.io.gfile.exists(argv.training.checkpoint_folder):
-      tf.io.gfile.makedirs(argv.training.checkpoint_folder)
+    if not tf.io.gfile.exists(
+        os.path.dirname(argv.training.checkpoint_folder)):
+      tf.io.gfile.makedirs(
+          os.path.dirname(argv.training.checkpoint_folder))
 
     train_summary_writer = tf.summary.create_file_writer(
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "train"))

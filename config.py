@@ -27,6 +27,6 @@ class Config(addict.Dict):
     export_config_path = flattened.get("export_config_path")
     export_config = bool(flattened.get("export_config"))
     if export_config_path and export_config:
-      with open(export_config, "w") as f:
+      with open(export_config_path, "w") as f:
         f.write(config.dump())
     return flattened
