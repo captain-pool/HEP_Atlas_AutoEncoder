@@ -61,7 +61,8 @@ def train(model, dataset, learning_rate, checkpoint_step,
   optimizer = tfa.optimizers.RectifiedAdam(lr=learning_rate)
   train_cumulative_loss = tf.metrics.Mean()
   test_cumulative_loss = tf.metrics.Mean()
-  loss_scale_factor = max(1, batch_size // tf.distribute.num_replicas_in_sync)
+  loss_scale_factor = max(
+      1, batch_size // tf.distribute.get_strategy().num_replicas_in_sync)
   checkpoint = tf.train.Checkpoint(
       optimizer=optimizer,
       model=model,
@@ -84,7 +85,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
     output = model(X)
     reconstruction_loss = loss_fn(output, Y) \
                           * (1 / batch_size) \
-                          * (batch_size if 
+                          * loss_scale_factor
     test_cumulative_loss(reconstruction_loss)
     add_op = tf.summary.experimental.get_step().assign_add(1)
     with tf.control_dependencies([add_op]):
