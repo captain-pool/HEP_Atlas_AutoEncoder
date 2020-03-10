@@ -7,6 +7,7 @@ import time
 
 import argparse
 import config
+import tqdm
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -55,10 +56,12 @@ def train(model, dataset, learning_rate, checkpoint_step,
           test_dataset, test_step, test_num_steps):
   loss_fn = utils.get_loss()
   step = 0
+  progress_bar = tqdm.tqdm(total=num_steps)
   tf.summary.experimental.set_step(tf.Variable(0, tf.int64))
   optimizer = tfa.optimizers.RectifiedAdam(lr=learning_rate)
   train_cumulative_loss = tf.metrics.Mean()
   test_cumulative_loss = tf.metrics.Mean()
+  loss_scale_factor = max(1, batch_size // tf.distribute.num_replicas_in_sync)
   checkpoint = tf.train.Checkpoint(
       optimizer=optimizer,
       model=model,
@@ -68,7 +71,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
   def _train_step_fn(model, X, Y):
     with tf.GradientTape() as tape:
       output = model(X)
-      loss = loss_fn(output, Y) * (1 / batch_size)
+      loss = loss_fn(output, Y) * (1 / batch_size) * loss_scale_factor
       train_cumulative_loss(loss)
     gradient = tape.gradient(loss, model.trainable_variables)
     step_op = optimizer.apply_gradients(
@@ -79,7 +82,9 @@ def train(model, dataset, learning_rate, checkpoint_step,
 
   def _test_step_fn(model, X, Y):
     output = model(X)
-    reconstruction_loss = loss_fn(output, Y) * (1 / batch_size)
+    reconstruction_loss = loss_fn(output, Y) \
+                          * (1 / batch_size) \
+                          * (batch_size if 
     test_cumulative_loss(reconstruction_loss)
     add_op = tf.summary.experimental.get_step().assign_add(1)
     with tf.control_dependencies([add_op]):
@@ -108,6 +113,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
         while (step % test_step) < test_num_steps:
           test_X, test_Y = next(test_dataset)
           step = distributed_step(model, test_X, test_Y, False)
+          progress_bar.update(1)
       if not step % checkpoint_step:
         tf.print("Checkpoining ...")
         utils.save_checkpoint(checkpoint)
@@ -122,6 +128,8 @@ def train(model, dataset, learning_rate, checkpoint_step,
           tf.summary.scalar("Cumulative Reconstruction Loss",
                             test_cumulative_loss.result(),
                             tf.summary.experimental.get_step())
+      progress_bar.update(1)
+  progress_bar.close()
 
 def main(argv):
   tf.random.set_seed(0)
