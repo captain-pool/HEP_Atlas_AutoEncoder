@@ -28,6 +28,7 @@ def load_pickle_dataset(pickle_path, cache=True):
   with tf.io.gfile.GFile(pickle_path, "rb") as f:
     dataframe = pickle.load(f)
   target = source = tf.cast(dataframe.values, tf.float32)
+  configuration.dataset.columns = dataframe.columns.values.tolist()
   standard_deviation = tf.math.reduce_std(source)
   mean = tf.reduce_mean(source)
   dataset = tf.data.Dataset.from_tensor_slices((source, target))

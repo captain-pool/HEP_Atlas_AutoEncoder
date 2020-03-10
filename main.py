@@ -55,12 +55,14 @@ def train(model, dataset, learning_rate, checkpoint_step,
           batch_size, num_steps,
           test_dataset, test_step, test_num_steps):
   loss_fn = utils.get_loss()
+  diff_loss_fn = utils.get_loss("diff_loss")
   step = 0
   progress_bar = tqdm.tqdm(total=num_steps)
   tf.summary.experimental.set_step(tf.Variable(0, tf.int64))
   optimizer = tfa.optimizers.RectifiedAdam(lr=learning_rate)
   train_cumulative_loss = tf.metrics.Mean()
   test_cumulative_loss = tf.metrics.Mean()
+
   loss_scale_factor = max(
       1, batch_size // tf.distribute.get_strategy().num_replicas_in_sync)
   checkpoint = tf.train.Checkpoint(
@@ -69,17 +71,20 @@ def train(model, dataset, learning_rate, checkpoint_step,
       summary_step=tf.summary.experimental.get_step())
   if utils.checkpoint_exists():
     utils.load_latest_checkpoint(checkpoint)
+
   def _train_step_fn(model, X, Y):
     with tf.GradientTape() as tape:
       output = model(X)
       loss = loss_fn(output, Y) * (1 / batch_size) * loss_scale_factor
       train_cumulative_loss(loss)
     gradient = tape.gradient(loss, model.trainable_variables)
+    diff_loss = diff_loss_fn(output, Y)
     step_op = optimizer.apply_gradients(
         zip(gradient, model.trainable_variables))
     tf.summary.experimental.set_step(optimizer.iterations)
     with tf.control_dependencies([step_op]):
-      return tf.summary.experimental.get_step()
+      return (tf.summary.experimental.get_step(),
+              diff_loss)
 
   def _test_step_fn(model, X, Y):
     output = model(X)
@@ -87,9 +92,11 @@ def train(model, dataset, learning_rate, checkpoint_step,
                           * (1 / batch_size) \
                           * loss_scale_factor
     test_cumulative_loss(reconstruction_loss)
+    diff_loss = diff_loss_fn(output, Y)
     add_op = tf.summary.experimental.get_step().assign_add(1)
     with tf.control_dependencies([add_op]):
-      return tf.summary.experimental.get_step()
+      return (tf.summary.experimental.get_step(),
+              diff_loss)
 
   @tf.function
   def distributed_step(model, X, Y, istrain):
@@ -98,23 +105,20 @@ def train(model, dataset, learning_rate, checkpoint_step,
     if istrain:
       _step_fn = _train_step_fn
 
-    distributed_metric = strategy.experimental_run_v2(
+    distributed_step, distributed_diff = strategy.experimental_run_v2(
         _step_fn, args=[model, X, Y])
-    mean_metric = strategy.reduce(tf.distribute.ReduceOp.MEAN,
-                                  distributed_metric, axis=None)
-    return mean_metric
+    mean_step = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                  distributed_step, axis=None)
+    mean_diff = strategy.reduce(tf.distribute.ReduceOp.MEAN,
+                                distributed_diff, axis=1)
+    return mean_step, mean_diff
 
   with train_summary_writer.as_default():
     while step < num_steps:
       X, Y = next(dataset)
       start_time = time.time()
-      step = distributed_step(model, X, Y, True)
+      step, diff = distributed_step(model, X, Y, True)
       end_time = time.time()
-      if test_dataset is not None:
-        while (step % test_step) < test_num_steps:
-          test_X, test_Y = next(test_dataset)
-          step = distributed_step(model, test_X, test_Y, False)
-          progress_bar.update(1)
       if not step % checkpoint_step:
         tf.print("Checkpoining ...")
         utils.save_checkpoint(checkpoint)
@@ -124,11 +128,18 @@ def train(model, dataset, learning_rate, checkpoint_step,
       tf.summary.scalar("Train Step Time (in seconds)",
                         end_time - start_time,
                         tf.summary.experimental.get_step())
+      utils.plot_diff_loss(diff)
       if test_dataset is not None:
         with test_summary_writer.as_default():
-          tf.summary.scalar("Cumulative Reconstruction Loss",
-                            test_cumulative_loss.result(),
-                            tf.summary.experimental.get_step())
+          while (step % test_step) < test_num_steps:
+            test_X, test_Y = next(test_dataset)
+            step, diff = distributed_step(model, test_X, test_Y, False)
+            utils.plot_diff_loss(diff)
+            progress_bar.update(1)
+            tf.summary.scalar("Cumulative Reconstruction Loss",
+                              test_cumulative_loss.result(),
+                              tf.summary.experimental.get_step())
+
       progress_bar.update(1)
   progress_bar.close()
 

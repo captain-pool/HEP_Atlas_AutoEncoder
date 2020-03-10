@@ -15,8 +15,16 @@ _STRATEGIES = {
 }
 
 _LOSSES = {
-  "root_mean_squared_error": losses.rmse_loss_fn
+  "root_mean_squared_error": losses.rmse_loss_fn,
+  "diff_loss": losses.diff_loss_fn
 }
+
+def plot_diff_loss(diff_loss):
+  for idx, column_name in \
+      enumerate(configuration.dataset.get("columns", list())):
+    scalar = diff_loss[idx]
+    tf.summary.scalar(column_name, scalar,
+                      tf.summary.experimental.get_step())
 
 def save_checkpoint(checkpoint):
   checkpoint.save(file_prefix=configuration.training.checkpoint_folder)
