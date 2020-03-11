@@ -11,7 +11,7 @@ class VanillaEncoderDecoder(abstract.Layer):
         tf.keras.layers.Dense(num_units) \
         for num_units in self._config.vanilla.architecture[type_].num_units
     ]
-    self._activation = tf.keras.activations.tanh
+    self._activation = tf.nn.swish
 
   def call(self, inputs):
     intermediate = self._denses[0](inputs)

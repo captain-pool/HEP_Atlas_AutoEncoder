@@ -171,10 +171,15 @@ def main(argv):
     if argv.training.export_saved_model_dir:
       print("Saving Model to %s" % argv.training.export_saved_model_dir)
       tf.saved_model.save(model, argv.training.export_saved_model_dir)
+
+
 if __name__ == "__main__":
   parser = build_parser()
   args = parser.parse_args()
   configs = config.Config(args)
+  # Importing Later on since these modules
+  # needs configuration objects to already be
+  # initialized with the arguments
   dataset_module = importlib.import_module("dataset")
   models_module = importlib.import_module("models")
   utils_module = importlib.import_module("utils")
