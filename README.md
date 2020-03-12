@@ -27,3 +27,5 @@ $ python3 task.py --saved_model_path final_saved_model/ \
 ```
 One can also export the plots to JPEGs by passing the directory to export to using `--export_jpegs` tag
 Please check `$ python3 task.py -h` for more options.
+
+For the sample notebook, checkout [HEP_Atlas_AutoEncoder.ipynb](HEP_Atlas_AutoEncoder.ipynb). It is recommended to run the notebook on Google Colab.
