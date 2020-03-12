@@ -10,17 +10,18 @@ def preprocess_data(x, y, mean, standard_deviation):
  y_normalized = ((y - mean) / standard_deviation)
  return x_normalized, y_normalized
 
-def load_dataset(path):
+def load_dataset(path, key="training"):
   strategy = tf.distribute.get_strategy()
-  dataset = load_pickle_dataset(path)
+  dataset, length, column_names = load_pickle_dataset(path)
+  configuration.dataset.columns = column_names 
   if configuration.dataset.shuffle:
     dataset = dataset.shuffle(1000, reshuffle_each_iteration=True)
-  dataset = dataset.batch(configuration.training.batch_size)
-  if configuration.dataset.repeat:
-    if configuration.dataset.repeat < 0:
+  dataset = dataset.batch(configuration.dataset[key].batch_size)
+  if configuration.dataset[key].repeat:
+    if configuration.dataset[key].repeat < 0:
       dataset = dataset.repeat()
     else:
-      dataset = dataset.repeat(configuration.dataset.repeat)
+      dataset = dataset.repeat(configuration.dataset[key].repeat)
 
   return iter(strategy.experimental_distribute_dataset(dataset))
 
@@ -28,7 +29,6 @@ def load_pickle_dataset(pickle_path, cache=True):
   with tf.io.gfile.GFile(pickle_path, "rb") as f:
     dataframe = pickle.load(f)
   target = source = tf.cast(dataframe.values, tf.float32)
-  configuration.dataset.columns = dataframe.columns.values.tolist()
   standard_deviation = tf.math.reduce_std(source)
   mean = tf.reduce_mean(source)
   dataset = tf.data.Dataset.from_tensor_slices((source, target))
@@ -37,4 +37,6 @@ def load_pickle_dataset(pickle_path, cache=True):
               num_parallel_calls=tf.data.experimental.AUTOTUNE)
   if cache:
     dataset.cache(configuration.dataset.records_path)
-  return dataset
+  return (dataset,
+          len(dataframe),
+          dataframe.columns.values.tolist())

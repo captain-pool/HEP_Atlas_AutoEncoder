@@ -1,6 +1,5 @@
 export_config_path: "/home/rick/HEP/biggie_config.yaml"
 training:
-  batch_size: 64
   num_steps: 50000
   learning_rate: !!float 1e-1
   loss: "root_mean_squared_error"

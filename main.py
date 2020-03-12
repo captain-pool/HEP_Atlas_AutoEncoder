@@ -27,16 +27,16 @@ def build_parser():
       help="Type of Model to train on" \
       "Can take only (vanilla/ residual)")
   parser.add_argument(
-      "--batch_size", dest="training.batch_size",
+      "--batch_size", dest="dataset.training.batch_size",
       type=int, help="Batch Size to Work on")
   parser.add_argument(
       "--num_steps", dest="training.num_steps",
       type=int, help="Number of steps to train for")
   parser.add_argument(
-      "--train_pickle_path", dest="training.dataset.pickle_path",
+      "--train_pickle_path", dest="dataset.training.pickle_path",
       type=os.path.normpath, help="Path to Pickled Pandas Dataframe (Train)")
   parser.add_argument(
-      "--test_pickle_path", dest="testing.dataset.pickle_path",
+      "--test_pickle_path", dest="dataset.testing.pickle_path",
       type=os.path.normpath, default=None,
       help="Path to Pickled Pandas Dataframe (Test)")
   parser.add_argument(
@@ -148,9 +148,9 @@ def main(argv):
   strategy, device = utils.get_strategy(argv.device)
   timestamp = datetime.datetime.now().isoformat()
   with tf.device(device), strategy.scope():
-    train_data = dataset.load_dataset(argv.training.dataset.pickle_path)
-    test_data = None if not argv.testing.dataset.pickle_path else \
-                dataset.load_dataset(argv.testing.dataset.pickle_path)
+    train_data = dataset.load_dataset(argv.dataset.training.pickle_path)
+    test_data = None if not argv.dataset.testing.pickle_path else \
+                dataset.load_dataset(argv.dataset.testing.pickle_path)
     model = models.load_model(argv.models.type)
     if not tf.io.gfile.exists(argv.training.logdir):
       tf.io.gfile.makedirs(argv.training.logdir)
@@ -165,7 +165,7 @@ def main(argv):
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "test"))
     train(model, train_data, argv.training.learning_rate,
           argv.training.checkpoint_step, train_summary_writer,
-          test_summary_writer, argv.training.batch_size,
+          test_summary_writer, argv.dataset.training.batch_size,
           argv.training.num_steps, test_data, argv.testing.step,
           argv.testing.step_size)
     if argv.training.export_saved_model_dir:

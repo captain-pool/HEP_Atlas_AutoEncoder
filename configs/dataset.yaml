@@ -1,4 +1,9 @@
 dataset:
   records_path: /home/rick/HEP/cache
-  repeat: -1
   shuffle: True
+  training:
+    batch_size: 64
+    repeat: -1
+  testing:
+    batch_size: 64
+    repeat: -1
