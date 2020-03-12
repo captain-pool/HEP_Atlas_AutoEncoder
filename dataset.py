@@ -29,14 +29,14 @@ def load_pickle_dataset(pickle_path, cache=True):
   with tf.io.gfile.GFile(pickle_path, "rb") as f:
     dataframe = pickle.load(f)
   target = source = tf.cast(dataframe.values, tf.float32)
-  standard_deviation = tf.math.reduce_std(source)
-  mean = tf.reduce_mean(source)
+  standard_deviation = tf.math.reduce_std(source, axis=0)
+  mean = tf.reduce_mean(source, axis=0)
   dataset = tf.data.Dataset.from_tensor_slices((source, target))
-  dataset.map(lambda x, y: \
+  dataset = dataset.map(lambda x, y: \
               preprocess_data(x, y, mean, standard_deviation),
               num_parallel_calls=tf.data.experimental.AUTOTUNE)
   if cache:
-    dataset.cache(configuration.dataset.records_path)
+    dataset = dataset.cache(configuration.dataset.records_path)
   return (dataset,
           len(dataframe),
           dataframe.columns.values.tolist())

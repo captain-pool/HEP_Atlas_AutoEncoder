@@ -4,6 +4,7 @@ models:
     architecture:
       encoder:
         num_units:
+          - 200
           - 100
           - 50
           - 3
@@ -11,6 +12,7 @@ models:
         num_units:
           - 50
           - 100
+          - 200
           - 4
   residual:
     architecture:

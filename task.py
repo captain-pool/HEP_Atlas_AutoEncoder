@@ -9,7 +9,6 @@ import numpy as np
 import tensorflow as tf
 import tqdm
 
-
 def difference_metric(saved_model):
   diff_loss_fn = utils.get_loss("diff_loss")
 
@@ -96,7 +95,8 @@ def main(argv):
 
   for X, Y in tqdm.tqdm(infer_dataset, total=dataset_length):
     for metric in metric_fns:
-      metrics[metric].append(metric_fns[metric](X, Y).numpy())
+      value = metric_fns[metric](X, Y).numpy()
+      metrics[metric].append(value)
   plot_metrics(summary_writer, metrics,
                argv.export_jpegs.strip(), column_names, argv.nbins)
 

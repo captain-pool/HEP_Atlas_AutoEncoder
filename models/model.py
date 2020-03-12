@@ -11,12 +11,12 @@ class VanillaEncoderDecoder(abstract.Layer):
         tf.keras.layers.Dense(num_units) \
         for num_units in self._config.vanilla.architecture[type_].num_units
     ]
-    self._activation = tf.nn.swish
+    self._activation = tf.nn.tanh
 
   def call(self, inputs):
-    intermediate = self._denses[0](inputs)
+    intermediate = inputs
     # Layer Stitching
-    for dense in self._denses[1:-1]:
+    for dense in self._denses[:-1]:
       intermediate = dense(intermediate)
       intermediate = self._activation(intermediate)
     intermediate = self._denses[-1](intermediate)

@@ -22,5 +22,6 @@ class EncoderDecoder(tf.keras.Model):
 def load_model(name):
   model_family = ModelRegister.instances[name]
   types = configuration[name].architecture.keys()
+  #combined_model = tf.keras.models.Sequential([model_family(type_) for type_ in types])
   combined_model = EncoderDecoder(types, model_family, name="combined_model") 
   return combined_model
