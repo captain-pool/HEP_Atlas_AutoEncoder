@@ -25,7 +25,7 @@ def load_dataset(path, key="training"):
 
   return iter(strategy.experimental_distribute_dataset(dataset))
 
-def load_pickle_dataset(pickle_path, cache=True):  
+def load_pickle_dataset(pickle_path):  
   with tf.io.gfile.GFile(pickle_path, "rb") as f:
     dataframe = pickle.load(f)
   target = source = tf.cast(dataframe.values, tf.float32)
@@ -35,8 +35,6 @@ def load_pickle_dataset(pickle_path, cache=True):
   dataset = dataset.map(lambda x, y: \
               preprocess_data(x, y, mean, standard_deviation),
               num_parallel_calls=tf.data.experimental.AUTOTUNE)
-  if cache:
-    dataset = dataset.cache(configuration.dataset.records_path)
   return (dataset,
           len(dataframe),
           dataframe.columns.values.tolist())
