@@ -11,7 +11,9 @@ class VanillaEncoderDecoder(abstract.Layer):
         tf.keras.layers.Dense(num_units) \
         for num_units in self._config.vanilla.architecture[type_].num_units
     ]
-    self._activation = tf.nn.tanh
+    self._activation = tf.nn.swish
+    self._last_activation = tf.nn.tanh if type_.lower() == "decoder" \
+                            else lambda x: x
 
   def call(self, inputs):
     intermediate = inputs
@@ -19,7 +21,7 @@ class VanillaEncoderDecoder(abstract.Layer):
     for dense in self._denses[:-1]:
       intermediate = dense(intermediate)
       intermediate = self._activation(intermediate)
-    intermediate = self._denses[-1](intermediate)
+    intermediate = self._last_activation(self._denses[-1](intermediate))
     return intermediate
 
 class ResidualEncoderDecoder(abstract.Layer):

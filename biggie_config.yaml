@@ -8,7 +8,7 @@ dataset:
         pickle_path: dataset/all_jets_train_4D_100_percent.pkl
         batch_size: 64
         repeat: -1
-    records_path: /home/rick/HEP/cache/cache
+    records_path: cache/
     shuffle: yes
 device: cpu
 export_config: yes
@@ -16,13 +16,13 @@ model:
     type: vanilla
 training:
     export_saved_model_dir: final_saved_model
-    learning_rate: 0.01
+    learning_rate: 0.001
     logdir: logdir
     num_steps: 50000
     loss: root_mean_squared_error
     checkpoint_step: 1999
-    checkpoint_folder: /home/rick/HEP/checkpoints/ckpt
-export_config_path: /home/rick/HEP/biggie_config.yaml
+    checkpoint_folder: checkpoints/ckpt
+export_config_path: biggie_config.yaml
 testing:
     step: 100
     step_size: 10
