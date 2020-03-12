@@ -5,8 +5,6 @@
 # Python Folders
 __pycache__/
 
-#Dataset Pickles
-*.pkl
 
 # Log Files
 logdir/*
