@@ -1,5 +1,5 @@
 dataset:
-  records_path: /home/rick/HEP/cache/cache
+  records_path: cache/
   shuffle: True
   training:
     batch_size: 64
