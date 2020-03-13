@@ -17,9 +17,6 @@ def build_parser():
       "-d", "--device", default="cpu",
       help="Device to use for training")
   parser.add_argument(
-      "--lr", dest="training.learning_rate", default=1e-3,
-      type=float, help="Learning Rate of the model")
-  parser.add_argument(
       "--configs", dest="config", nargs="+", required=True,
       help="Config Files to load Configuration From")
   parser.add_argument(
@@ -50,7 +47,7 @@ def build_parser():
       dest="training.export_saved_model_dir", help="Path to export Saved Model to")
   return parser
 
-def train(model, dataset, learning_rate, checkpoint_step,
+def train(model, dataset, checkpoint_step,
           train_summary_writer, test_summary_writer,
           batch_size, num_steps,
           test_dataset, test_step, test_num_steps):
@@ -59,6 +56,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
   step = 0
   progress_bar = tqdm.tqdm(total=num_steps)
   tf.summary.experimental.set_step(tf.Variable(0, tf.int64))
+  learning_rate = utils.get_learning_rate(0)
   optimizer = tfa.optimizers.RectifiedAdam(lr=learning_rate)
   train_cumulative_loss = tf.metrics.Mean()
   test_cumulative_loss = tf.metrics.Mean()
@@ -88,9 +86,7 @@ def train(model, dataset, learning_rate, checkpoint_step,
 
   def _test_step_fn(model, X, Y):
     output = model(X)
-    reconstruction_loss = loss_fn(output, Y) \
-                          * (1 / batch_size) \
-                          * loss_scale_factor
+    reconstruction_loss = loss_fn(output, Y) * (1 / batch_size) * loss_scale_factor
     test_cumulative_loss(reconstruction_loss)
     diff_loss = diff_loss_fn(output, Y)
     add_op = tf.summary.experimental.get_step().assign_add(1)
@@ -119,6 +115,9 @@ def train(model, dataset, learning_rate, checkpoint_step,
       start_time = time.time()
       step, diff = distributed_step(model, X, Y, True)
       end_time = time.time()
+      learning_rate = utils.get_learning_rate(step)
+      if learning_rate:
+        optimizer.learning_rate.assign(learning_rate)
       if not step % checkpoint_step:
         tf.print("Checkpoining ...")
         utils.save_checkpoint(checkpoint)
@@ -145,6 +144,8 @@ def train(model, dataset, learning_rate, checkpoint_step,
 
 def main(argv):
   tf.random.set_seed(0)
+  print("Using Configuration")
+  print(argv)
   strategy, device = utils.get_strategy(argv.device)
   timestamp = datetime.datetime.now().isoformat()
   with tf.device(device), strategy.scope():
@@ -163,11 +164,11 @@ def main(argv):
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "train"))
     test_summary_writer = tf.summary.create_file_writer(
         os.path.join(argv.training.logdir, "expt_%s" % timestamp, "test"))
-    train(model, train_data, argv.training.learning_rate,
-          argv.training.checkpoint_step, train_summary_writer,
-          test_summary_writer, argv.dataset.training.batch_size,
-          argv.training.num_steps, test_data, argv.testing.step,
-          argv.testing.step_size)
+    train(model, train_data, argv.training.checkpoint_step,
+          train_summary_writer, test_summary_writer,
+          argv.dataset.training.batch_size, argv.training.num_steps,
+          test_data, argv.testing.step, argv.testing.step_size)
+
     if argv.training.export_saved_model_dir:
       print("Saving Model to %s" % argv.training.export_saved_model_dir)
       tf.saved_model.save(model, argv.training.export_saved_model_dir)

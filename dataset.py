@@ -12,7 +12,7 @@ def preprocess_data(x, y, mean, standard_deviation):
 
 def load_dataset(path, key="training"):
   strategy = tf.distribute.get_strategy()
-  dataset, length, column_names = load_pickle_dataset(path)
+  dataset, length, column_names, mean, std = load_pickle_dataset(path)
   configuration.dataset.columns = column_names 
   if configuration.dataset.shuffle:
     dataset = dataset.shuffle(1000, reshuffle_each_iteration=True)
@@ -37,4 +37,6 @@ def load_pickle_dataset(pickle_path):
               num_parallel_calls=tf.data.experimental.AUTOTUNE)
   return (dataset,
           len(dataframe),
-          dataframe.columns.values.tolist())
+          dataframe.columns.values.tolist(),
+          mean,
+          standard_deviation)

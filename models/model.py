@@ -13,8 +13,7 @@ class VanillaEncoderDecoder(abstract.Layer):
     ]
     self._activation = tf.nn.swish
     self._last_activation = tf.nn.tanh if type_.lower() == "decoder" \
-                            else lambda x: x
-
+                            else tf.keras.layers.Lambda(lambda x: x)
   def call(self, inputs):
     intermediate = inputs
     # Layer Stitching

@@ -19,6 +19,12 @@ _LOSSES = {
   "diff_loss": losses.diff_loss_fn
 }
 
+def get_learning_rate(step):
+  if configuration.training.learning_rate.step:
+    if step >= configuration.training.learning_rate.step[0]:
+      configuration.training.learning_rate.step.pop(0)
+      return configuration.training.learning_rate.value.pop(0)
+
 def plot_diff_loss(diff_loss):
   for idx, column_name in \
       enumerate(configuration.dataset.get("columns", list())):

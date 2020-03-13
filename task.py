@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 import tqdm
 
-def difference_metric(saved_model):
+def difference_metric(saved_model, *args):
   diff_loss_fn = utils.get_loss("diff_loss")
 
   @tf.function
@@ -20,8 +20,18 @@ def difference_metric(saved_model):
 
   return difference_metric_fn
 
+
+def predictions(saved_model, mean, std):
+  @tf.function
+  def prediction_fn(X, Y):
+    Y_hat = saved_model(X)
+    Y_hat = (Y_hat * std) + mean
+    return tf.squeeze(Y_hat)
+  return prediction_fn
+
 _METRICS_REGISTER = {
-    "difference": difference_metric
+    #"difference": difference_metric,
+    "predictions": predictions
 }
 
 @tf.function
@@ -44,9 +54,9 @@ def plot_metrics(summary_writer, metrics, export_jpegs, columns, nbins):
       if export_jpegs:
         Ys = np.asarray(metrics[metric_name]).T
         Xs = list(range(len(metrics[metric_name])))
+        breakpoint()
         for idx, y in enumerate(Ys):
-          plt.title("%s: (%s)" % (metric_name, columns[idx]))
-          
+          plt.title("%s: (%s)" % (metric_name, columns[idx])) 
           plt.hist(y, bins=nbins)
           figure_path = os.path.join(export_jpegs,
                                      "%s_%s.jpg" % (columns[idx], metric_name))
@@ -81,8 +91,9 @@ def build_parser():
 
 def main(argv):
   saved_model = tf.saved_model.load(argv.saved_model_path)
-  infer_dataset, dataset_length, column_names = dataset.load_pickle_dataset(
-      argv.infer_pickle_path)
+  returned_values = (dataset
+                     .load_pickle_dataset(argv.infer_pickle_path)) 
+  infer_dataset, dataset_length, column_names, mean, std = returned_values
   infer_dataset = infer_dataset.batch(1)
   metrics = collections.defaultdict(list)
   metric_fns = dict()
@@ -91,7 +102,7 @@ def main(argv):
     tf.io.gfile.makedirs(inference_dir)
   summary_writer = tf.summary.create_file_writer(inference_dir)
   for metric in _METRICS_REGISTER:
-    metric_fns[metric] = _METRICS_REGISTER[metric](saved_model)
+    metric_fns[metric] = _METRICS_REGISTER[metric](saved_model, mean, std)
 
   for X, Y in tqdm.tqdm(infer_dataset, total=dataset_length):
     for metric in metric_fns:
