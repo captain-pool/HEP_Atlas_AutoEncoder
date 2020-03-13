@@ -59,7 +59,7 @@ def plot_metrics(summary_writer, metrics, export_jpegs, columns, nbins):
           plt.title("%s: (%s)" % (metric_name, columns[idx])) 
           plt.hist(y, bins=nbins)
           figure_path = os.path.join(export_jpegs,
-                                     "%s_%s.jpg" % (columns[idx], metric_name))
+                                     "%s_%s.jpg" % (metric_name, columns[idx]))
           plt.savefig(figure_path)
           plt.clf()
           print("Saved plot of %s to %s" % (metric_name, figure_path))
