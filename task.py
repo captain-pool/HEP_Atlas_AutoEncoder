@@ -48,16 +48,17 @@ def plot_metrics(summary_writer, metrics, export_jpegs, columns, nbins):
           summary_histogram_fn(
             summary_writer,
             "%s_%s" % (columns[idx], metric_name),
-                               tf.convert_to_tensor(index, dtype=tf.int64),
-                               tf.convert_to_tensor(nbins),
-                               tf.convert_to_tensor(value))
+             tf.convert_to_tensor(index, dtype=tf.int64),
+             tf.convert_to_tensor(nbins),
+             tf.convert_to_tensor(value))
       if export_jpegs:
-        Ys = np.asarray(metrics[metric_name]).T
+        Ys, Y_hats = [*np.transpose(np.stack(metrics[metric_name]), (1, 2, 0))]
         Xs = list(range(len(metrics[metric_name])))
-        breakpoint()
-        for idx, y in enumerate(Ys):
+        for idx, (y, y_hat) in enumerate(zip(Ys, Y_hats)):
           plt.title("%s: (%s)" % (metric_name, columns[idx])) 
-          plt.hist(y, bins=nbins)
+          plt.hist(y, bins=nbins, label="original")
+          plt.hist(y_hat, bins=nbins, label="reconstructed")
+          plt.legend(loc='upper right')
           figure_path = os.path.join(export_jpegs,
                                      "%s_%s.jpg" % (metric_name, columns[idx]))
           plt.savefig(figure_path)
@@ -107,7 +108,7 @@ def main(argv):
   for X, Y in tqdm.tqdm(infer_dataset, total=dataset_length):
     for metric in metric_fns:
       value = metric_fns[metric](X, Y).numpy()
-      metrics[metric].append(value)
+      metrics[metric].append([tf.squeeze(Y).numpy(), value])
   plot_metrics(summary_writer, metrics,
                argv.export_jpegs.strip(), column_names, argv.nbins)
 

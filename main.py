@@ -151,7 +151,7 @@ def main(argv):
   with tf.device(device), strategy.scope():
     train_data = dataset.load_dataset(argv.dataset.training.pickle_path)
     test_data = None if not argv.dataset.testing.pickle_path else \
-                dataset.load_dataset(argv.dataset.testing.pickle_path)
+                dataset.load_dataset(argv.dataset.testing.pickle_path, "testing")
     model = models.load_model(argv.models.type)
     if not tf.io.gfile.exists(argv.training.logdir):
       tf.io.gfile.makedirs(argv.training.logdir)

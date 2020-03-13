@@ -11,7 +11,7 @@ class VanillaEncoderDecoder(abstract.Layer):
         tf.keras.layers.Dense(num_units) \
         for num_units in self._config.vanilla.architecture[type_].num_units
     ]
-    self._activation = tf.nn.swish
+    self._activation = tf.keras.layers.Lambda(lambda x: x)
     self._last_activation = tf.nn.tanh if type_.lower() == "decoder" \
                             else tf.keras.layers.Lambda(lambda x: x)
   def call(self, inputs):
